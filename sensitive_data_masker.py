@@ -10,7 +10,7 @@ from src.modules.sensitive_data_masker.args import get_args
 
 async def main():
     args = get_args()
-    real_path = os.path.realpath(args.path)
+    real_path = os.path.realpath(args.input)
     output_dir = os.path.abspath(args.output)
 
     print("🎯 Starting sensitive data masking with coordinate templates...")

@@ -6,10 +6,10 @@ def get_args():
         description="llm-liaa-payment-receipt-sensitive-data-masker"
     )
     parser.add_argument(
-        "-p",
-        "--path",
+        "-i",
+        "--input",
         required=True,
-        help="path to the payments receipts to mask sensitive data",
+        help="input path to the payments receipts to mask sensitive data",
     )
     parser.add_argument(
         "-o",
