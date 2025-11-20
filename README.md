@@ -117,7 +117,11 @@ To count how many payment receipts we have in
 $ python count.py
 ```
 
-### sensitive_data_masker
+### coordinates_config_setter.py
+
+Use this script to save all coordinates of sensitive data of an payment receipt
+
+### DEPRECATED_sensitive_data_masker
 
 We dont have good result in here
 
