@@ -2,11 +2,11 @@ import asyncio
 import datetime
 import os
 
-from src.classify.output import move_files_to_specified_bank_folders
-from src.classify.gemini import (
+from src.modules.classify.output import move_files_to_specified_bank_folders
+from src.modules.classify.gemini import (
     get_promises_of_all_files_to_find_out_bank_of_payment_receipts,
 )
-from src.classify.args import get_args
+from src.modules.classify.args import get_args
 
 
 async def main():

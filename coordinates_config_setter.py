@@ -1,16 +1,38 @@
 import cv2
 import json
 import argparse
+import fitz
+import numpy as np
 from pathlib import Path
 
 
 class CoordinateSelector:
-    def __init__(self, image_path, output_file="coordinates_output.json"):
-        self.image_path = image_path
+    def __init__(self, file_path, output_file="coordinates_output.json"):
+        self.file_path = file_path
         self.output_file = output_file
-        self.image = cv2.imread(image_path)
-        if self.image is None:
-            raise ValueError(f"Could not load image: {image_path}")
+        self.file_extension = Path(file_path).suffix.lower()
+        self.is_pdf = self.file_extension == ".pdf"
+
+        # Load file (PDF or image)
+        if self.is_pdf:
+            self.pdf_doc = fitz.open(file_path)
+            self.pdf_page = self.pdf_doc[0]  # First page
+            # Convert PDF page to image
+            pix = self.pdf_page.get_pixmap(
+                matrix=fitz.Matrix(2, 2)
+            )  # 2x zoom for better quality
+            img_data = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
+                pix.height, pix.width, pix.n
+            )
+            # Convert RGBA to BGR if necessary
+            if pix.n == 4:
+                self.image = cv2.cvtColor(img_data, cv2.COLOR_RGBA2BGR)
+            else:
+                self.image = cv2.cvtColor(img_data, cv2.COLOR_RGB2BGR)
+        else:
+            self.image = cv2.imread(file_path)
+            if self.image is None:
+                raise ValueError(f"Could not load image: {file_path}")
 
         self.original_image = self.image.copy()
         self.rectangles = []
@@ -19,7 +41,8 @@ class CoordinateSelector:
         self.start_point = None
 
         # Window name
-        self.window_name = "Coordinate Selector - Draw rectangles, Press 'u' to undo, 'r' to reset, 'q' to quit"
+        file_type = "PDF" if self.is_pdf else "Image"
+        self.window_name = f"Coordinate Selector ({file_type}) - Draw rectangles, Press 'u' to undo, 'r' to reset, 'q' to quit"
 
         # Load existing coordinates if file exists
         self.load_coordinates()
@@ -156,32 +179,67 @@ class CoordinateSelector:
         else:
             print("\n⚠️  Nothing to undo")
 
-    def generate_masked_image(self, output_path="coordinates_output.png"):
-        """Generate a masked image with black rectangles and save it"""
+    def generate_masked_output(self):
+        """Generate masked output (PDF or image) with black rectangles"""
         if not self.rectangles:
             print("⚠️  No rectangles to mask!")
             return False
 
         try:
-            # Create a copy of the original image
-            masked_image = self.original_image.copy()
+            if self.is_pdf:
+                # Generate masked PDF
+                output_path = "coordinates_output.pdf"
 
-            # Apply black rectangles to all coordinates
-            for coord in self.rectangles:
-                cv2.rectangle(
-                    masked_image,
-                    (coord["x"], coord["y"]),
-                    (coord["x"] + coord["width"], coord["y"] + coord["height"]),
-                    (0, 0, 0),  # Black color
-                    -1,
-                )  # Filled rectangle
+                # Create a copy of the PDF
+                output_doc = fitz.open(self.file_path)
+                output_page = output_doc[0]
 
-            # Save the masked image
-            cv2.imwrite(output_path, masked_image)
-            print(f"\n✅ Masked image saved to: {output_path}")
+                # Get the scale factor between displayed image and PDF
+                page_rect = output_page.rect
+                img_height, img_width = self.image.shape[:2]
+                scale_x = page_rect.width / img_width
+                scale_y = page_rect.height / img_height
+
+                # Apply black rectangles to PDF
+                for coord in self.rectangles:
+                    # Scale coordinates back to PDF dimensions
+                    pdf_x = coord["x"] * scale_x
+                    pdf_y = coord["y"] * scale_y
+                    pdf_width = coord["width"] * scale_x
+                    pdf_height = coord["height"] * scale_y
+
+                    rect = fitz.Rect(
+                        pdf_x, pdf_y, pdf_x + pdf_width, pdf_y + pdf_height
+                    )
+                    output_page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
+
+                output_doc.save(output_path)
+                output_doc.close()
+                print(f"\n✅ Masked PDF saved to: {output_path}")
+            else:
+                # Generate masked image
+                output_path = "coordinates_output.png"
+
+                # Create a copy of the original image
+                masked_image = self.original_image.copy()
+
+                # Apply black rectangles to all coordinates
+                for coord in self.rectangles:
+                    cv2.rectangle(
+                        masked_image,
+                        (coord["x"], coord["y"]),
+                        (coord["x"] + coord["width"], coord["y"] + coord["height"]),
+                        (0, 0, 0),  # Black color
+                        -1,
+                    )  # Filled rectangle
+
+                # Save the masked image
+                cv2.imwrite(output_path, masked_image)
+                print(f"\n✅ Masked image saved to: {output_path}")
+
             return True
         except Exception as e:
-            print(f"❌ Error generating masked image: {e}")
+            print(f"❌ Error generating masked output: {e}")
             return False
 
     def run(self):
@@ -191,7 +249,8 @@ class CoordinateSelector:
 
         # Get image dimensions
         height, width = self.image.shape[:2]
-        print(f"\n🖼️  Image loaded: {self.image_path}")
+        file_type = "PDF" if self.is_pdf else "Image"
+        print(f"\n🖼️  {file_type} loaded: {self.file_path}")
         print(f"   Dimensions: {width}x{height}px")
         print("\n" + "=" * 70)
         print("INSTRUCTIONS:")
@@ -200,7 +259,10 @@ class CoordinateSelector:
         print("  • Coordinates are auto-saved to coordinates_output.json")
         print("  • Press 'u' to undo last rectangle")
         print("  • Press 'r' to reset (clear all rectangles)")
-        print("  • Press 'q' to quit and generate masked image")
+        if self.is_pdf:
+            print("  • Press 'q' to quit and generate masked PDF")
+        else:
+            print("  • Press 'q' to quit and generate masked image")
         print("=" * 70 + "\n")
 
         while True:
@@ -208,9 +270,15 @@ class CoordinateSelector:
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord("q"):
-                # Generate masked image before quitting
-                self.generate_masked_image()
-                print("\n👋 Quit - masked image generated as coordinates_output.png")
+                # Generate masked output before quitting
+                self.generate_masked_output()
+                output_type = "PDF" if self.is_pdf else "image"
+                output_file = (
+                    "coordinates_output.pdf"
+                    if self.is_pdf
+                    else "coordinates_output.png"
+                )
+                print(f"\n👋 Quit - masked {output_type} generated as {output_file}")
                 break
             elif key == ord("r"):
                 # Reset
@@ -221,12 +289,18 @@ class CoordinateSelector:
 
         cv2.destroyAllWindows()
 
+        # Close PDF if it was opened
+        if self.is_pdf:
+            self.pdf_doc.close()
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Interactive coordinate selector for sensitive data masking"
+        description="Interactive coordinate selector for sensitive data masking (supports images and PDFs)"
     )
-    parser.add_argument("-i", "--image", required=True, help="Path to the image file")
+    parser.add_argument(
+        "-i", "--input", required=True, help="Path to the input file (image or PDF)"
+    )
     parser.add_argument(
         "-o",
         "--output",
@@ -237,7 +311,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        selector = CoordinateSelector(args.image, args.output)
+        selector = CoordinateSelector(args.input, args.output)
         selector.run()
     except Exception as e:
         print(f"❌ Error: {e}")

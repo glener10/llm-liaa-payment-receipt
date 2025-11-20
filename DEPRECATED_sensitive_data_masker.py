@@ -2,12 +2,14 @@ import asyncio
 import datetime
 import os
 
-from src.sensitive_data_masker.gemini import (
+from src.modules.DEPRECATED_sensitive_data_masker.gemini import (
     get_promises_of_all_files_to_mask_sensitive_data,
 )
-from src.sensitive_data_masker.args import get_args
-from src.sensitive_data_masker.validator import validate_and_clean_results
-from src.sensitive_data_masker.masking import apply_masks_to_files
+from src.modules.DEPRECATED_sensitive_data_masker.args import get_args
+from src.modules.DEPRECATED_sensitive_data_masker.validator import (
+    validate_and_clean_results,
+)
+from src.modules.DEPRECATED_sensitive_data_masker.masking import apply_masks_to_files
 
 
 async def main():

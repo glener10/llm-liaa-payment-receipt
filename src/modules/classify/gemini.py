@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai import types
 
-from src.classify.prompt import get_prompt_find_out_bank_of_payment_receipts
+from src.modules.classify.prompt import get_prompt_find_out_bank_of_payment_receipts
 from src.utils.mime_type import get_mime_type
 
 load_dotenv()

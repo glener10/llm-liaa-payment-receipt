@@ -7,7 +7,9 @@ from google.generativeai import types
 from PIL import Image
 import fitz
 
-from src.sensitive_data_masker.prompt import get_prompt_sensitive_data_masker
+from src.modules.DEPRECATED_sensitive_data_masker.prompt import (
+    get_prompt_sensitive_data_masker,
+)
 from src.utils.mime_type import get_mime_type
 
 load_dotenv()
