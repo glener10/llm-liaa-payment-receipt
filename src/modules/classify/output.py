@@ -40,5 +40,5 @@ def move_files_to_specified_bank_folders(results_from_models, output_path):
             classification_folder_path, file_name_without_classification
         )
 
-        # shutil.move(path_of_file_without_classification, destination)
-        shutil.copy(path_of_file_without_classification, destination)
+        shutil.move(path_of_file_without_classification, destination)
+        # shutil.copy(path_of_file_without_classification, destination)
