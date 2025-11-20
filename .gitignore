@@ -3,3 +3,4 @@ __pycache__/
 venv*/
 dataset
 to_config_coordinates
+z
