@@ -2,10 +2,13 @@ import datetime
 import argparse
 import os
 import json
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai import types
+
+from src.utils.dirs import remove_empty_dirs
 
 load_dotenv()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -35,8 +38,7 @@ Dados sensíveis incluem:
 - Chave Pix (CPF, email, telefone, chave aleatória)
 - Número de conta bancária
 - Agência
-- Valores de transação
-- Datas de transação
+- Identificador da transação
 
 Retorne um JSON com:
 {
@@ -72,14 +74,17 @@ Se QUALQUER dado sensível estiver visível, retorne has_sensitive_data=true."""
         }
 
 
-def process_files(input_dir):
+def process_files(input_dir, output_dir):
     """
     Process all files in input directory and validate masking
 
     Args:
         input_dir: Directory with masked files to validate
+        output_dir: Directory to copy files that passed validation
+
+    Returns:
+        dict: Statistics about the validation
     """
-    guardrails_passed = []
     for root, _, files in os.walk(input_dir):
         for file in files:
             _, ext = os.path.splitext(file)
@@ -97,16 +102,18 @@ def process_files(input_dir):
 
             print(f"guardrails: validating '{rel_path}' 🔍")
             result = check_sensitive_data(file_path)
+
             if result["has_sensitive_data"]:
                 print(
                     f"guardrails: '{rel_path}' sensitive data found - {result['reason']} ⚠️"
                 )
             else:
+                output_file_path = os.path.join(output_dir, rel_path)
+                os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+                shutil.move(file_path, output_file_path)
                 print(
                     f"guardrails: '{rel_path}' all data masked - {result['reason']} ✅"
                 )
-                guardrails_passed.append(rel_path)
-    return guardrails_passed
 
 
 def main():
@@ -119,16 +126,26 @@ def main():
         required=True,
         help="Directory containing masked files to validate",
     )
+    parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="Directory to copy files that passed validation",
+    )
 
     args = parser.parse_args()
 
     input_dir = os.path.abspath(args.input)
+    output_dir = os.path.abspath(args.output)
 
     if not os.path.exists(input_dir):
         print(f"guardrails: ❌ Input directory does not exist: {input_dir}")
         return
 
-    process_files(input_dir)
+    os.makedirs(output_dir, exist_ok=True)
+
+    process_files(input_dir, output_dir)
+    remove_empty_dirs(input_dir)
 
 
 if __name__ == "__main__":
