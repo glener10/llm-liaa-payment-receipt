@@ -324,6 +324,47 @@ You exec using:
 python pipeline.py -i 'INPUT_FOLDER_PATH' -o 'OUTPUT_FOLDER_PATH'
 ```
 
+### 🌀 **Pipeline - pipeline_2.py**
+
+This pipeline combines masking and validation of payment receipts. It executes `sensitive_data_masker.py` followed by `guardrails.py` to ensure only properly masked files reach the final output.
+
+Ensure your input folder structure is as follows:
+
+```
+├── Joao/
+│   └── nu/
+│       └── receipt-Joao.png
+├── Maria/
+│   ├── inter/
+│   │   └── receipt-Maria.pdf
+│   └── sicredi/
+│       └── receipt2-Maria.pdf
+```
+
+You exec using:
+
+```
+python pipeline_2.py -i 'INPUT_FOLDER_PATH' -o 'OUTPUT_FOLDER_PATH'
+```
+
+How it works:
+
+1. Executes `sensitive_data_masker.py` to apply masks → temporary folder
+2. Executes `guardrails.py` to validate masked files → output folder (only validated files)
+3. Removes successfully processed files from the input directory
+4. Cleans up empty directories in both input and temporary folders
+
+Example output structure (only validated files):
+
+```
+├── Joao/
+│   └── nu/
+│       └── receipt-Joao.png (masked and validated)
+├── Maria/
+│   └── sicredi/
+│       └── receipt2-Maria.pdf (masked and validated)
+```
+
 <div id="author"></div>
 
 #### **👷 Author**
