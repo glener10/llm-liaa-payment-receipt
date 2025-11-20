@@ -1,3 +1,4 @@
+import datetime
 import os
 import shutil
 import argparse
@@ -59,4 +60,11 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = datetime.datetime.now()
+    print(f"file_organizer: 🚀 starting process at {start_time}")
+
     main()
+
+    end_time = datetime.datetime.now()
+    total_time = end_time - start_time
+    print(f"file_organizer: ✅  execution finished. Total time: {total_time}")
