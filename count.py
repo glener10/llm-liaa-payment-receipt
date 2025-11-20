@@ -3,6 +3,46 @@ import argparse
 from collections import defaultdict
 
 
+def count_coordinate_templates(coordinates_dir="src/config/coordinates"):
+    if not os.path.exists(coordinates_dir):
+        print(f"❌ Directory not found: {coordinates_dir}")
+        return
+
+    total_files = 0
+    bank_data = {}
+
+    for bank_name in os.listdir(coordinates_dir):
+        bank_path = os.path.join(coordinates_dir, bank_name)
+        if os.path.isdir(bank_path):
+            file_count = len(
+                [
+                    f
+                    for f in os.listdir(bank_path)
+                    if os.path.isfile(os.path.join(bank_path, f))
+                ]
+            )
+            template_count = file_count // 2
+            bank_data[bank_name] = {"files": file_count, "templates": template_count}
+            total_files += file_count
+
+    total_templates = total_files // 2
+
+    print(f"\n{'=' * 60}")
+    print("📊 COORDINATE TEMPLATES COUNT")
+    print(f"{'=' * 60}")
+
+    for bank in sorted(bank_data.keys()):
+        data = bank_data[bank]
+        print(
+            f"🏦 {bank:<20} : {data['templates']:>3} template(s) ({data['files']} files)"
+        )
+
+    print(f"{'-' * 60}")
+    print(f"📊 Total: {total_templates} template(s)")
+    print(f"🏦 Banks: {len(bank_data)}")
+    print(f"{'=' * 60}\n")
+
+
 def analyze_hierarchical_structure(root_path):
     extension_count = defaultdict(int)
     user_count = defaultdict(lambda: defaultdict(int))
@@ -18,7 +58,6 @@ def analyze_hierarchical_structure(root_path):
         print(f"error: The path '{real_path}' is not a directory.")
         return None
 
-    print("🔄 aAnalyzing hierarchical structure...")
     total_files = 0
 
     try:
@@ -46,7 +85,6 @@ def analyze_hierarchical_structure(root_path):
                     extension_count[extension] += 1
                     user_count[user][bank] += 1
                     bank_count[bank][extension] += 1
-        print(f"✅ analysis completed: {total_files} files processed")
     except Exception as e:
         print(f"❌ system error: {e}")
         return None
@@ -165,6 +203,8 @@ def main():
     args = parser.parse_args()
     root_path = os.path.abspath(args.input)
     print(f"🔍 Analyzing hierarchical structure at: {root_path}")
+
+    count_coordinate_templates()
 
     data = analyze_hierarchical_structure(root_path)
 
